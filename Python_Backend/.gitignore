@@ -1,0 +1,13 @@
+venv/
+
+__pycache__/
+*.pyc
+.DS_Store
+
+# geçici ses&hafıza dosyaları
+audio_output/
+temp_player_voice.wav
+*_hafiza.json
+
+# Model kaybını engelle
+tts_models/

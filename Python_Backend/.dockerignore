@@ -1,0 +1,6 @@
+venv/
+tts_models/
+audio_output/
+__pycache__/
+*.wav
+*.json

@@ -1,0 +1,5 @@
+flask
+requests
+deep-translator
+faster-whisper
+transformers==4.36.2

@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # ANA SUNUCU (Whisper-Llama Baglantisi)
+  ai_npc_sunucu:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./audio_output:/app/audio_output
+      - whisper_modelleri:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # TTS SUNUCUSU
+  tts_sunucu:
+    build: ./tts_service
+    ports:
+      - "5001:5001"
+    environment:
+      - COQUI_TOS_AGREED=1
+    volumes:
+      - ./ses_referanslari:/app/ses_referanslari
+      - ./audio_output:/app/audio_output
+      - xtts_modelleri:/root/.local/share/tts
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  xtts_modelleri:
+  whisper_modelleri:
