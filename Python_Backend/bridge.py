@@ -8,16 +8,16 @@ from faster_whisper import WhisperModel
 
 app = Flask(__name__)
 
-OLLAMA_URL = "http://host.docker.internal:11434/api/chat"
+OLLAMA_URL = "[http://host.docker.internal:11434/api/chat](http://host.docker.internal:11434/api/chat)"
 MODEL_NAME = "dolphin-llama3"
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"\n[SİSTEM] Başlatılıyor... Kullanılan Donanım: {device.upper()}")
+print(f"\n[SİSTEM] Başlatılıyor... Kullanılan Donanım: {device.upper()}", flush=True)
 
-print("[SİSTEM] Whisper yükleniyor...")
+print("[SİSTEM] Whisper yükleniyor...", flush=True)
 whisper_model = WhisperModel("base", device=device, compute_type="float16" if device=="cuda" else "int8")
 
-print("[SİSTEM] Bütün Yapay Zeka Motorları HAZIR!\n")
+print("[SİSTEM] Bütün Yapay Zeka Motorları HAZIR!\n", flush=True)
 
 def hafizayi_yukle(dosya_adi):
     if os.path.exists(dosya_adi):
@@ -39,7 +39,7 @@ def chat():
         audio_file.save(temp_audio_path)
         segments, _ = whisper_model.transcribe(temp_audio_path, language="tr")
         user_message_tr = "".join([segment.text for segment in segments])
-        print(f"[WHISPER DUYDU]: {user_message_tr}")
+        print(f"[WHISPER DUYDU]: {user_message_tr}", flush=True)
     else:
         user_message_tr = ""
 
@@ -47,13 +47,12 @@ def chat():
     if not user_message_tr.strip():
         return jsonify({"diyalog": "Seni duyamadım?", "eylem": "idle", "ses_dosyasi": ""})
 
-    npc_adi = data.get("npc_adi", "npc").lower().replace(" ", "_")
+    npc_adi = data.get("npc_adi", "npc").lower().replace(" ", " ")
     npc_prompt_tr = data.get("system_prompt", "")
     world_context = data.get("world_context", "Etrafta olağandışı bir durum yok.")
     
     # Referans sesi alıyoruz, TTS sunucusuna atıyoruz
     istenen_ses = data.get("referans_ses", "varsayilan.wav") 
-    
     hafiza_dosyasi = f"{npc_adi}_hafiza.json"
     
     try:
@@ -84,25 +83,26 @@ def chat():
             "options": {"temperature": 0.4, "num_ctx": 1024, "num_predict": 60}
         }
 
+        print(f"[{npc_adi.upper()}] Ollama'ya bağlanılıyor...", flush=True)
         response = requests.post(OLLAMA_URL, json=payload)
         ai_raw_output = response.json().get("message", {}).get("content", "{}")
         
         sohbet_gecmisi.append({"role": "assistant", "content": ai_raw_output})
         hafizayi_kaydet(sohbet_gecmisi, hafiza_dosyasi)
 
+        # OLLAMA MARKDOWN TEMİZLİĞİ (Çökme sebebi yüksek ihtimalle burasıydı)
+        ai_raw_output = ai_raw_output.strip().replace("```json", "").replace("```", "")
         ai_data = json.loads(ai_raw_output)
+        
         dialogue_en = ai_data.get("dialogue", "...")
         action_value = ai_data.get("action", "idle")
         
         dialogue_tr = GoogleTranslator(source='en', target='tr').translate(dialogue_en)
         
-        
-        # Eğer yapay zeka boş cevap üretirse çökmeyi engeliyoruz
         if not dialogue_tr or dialogue_tr.strip() == "":
             dialogue_tr = "Hmm..."
             
-        # tts motoruna request
-        print(f"[{npc_adi.upper()}] Llama Cevabı Üretti, Seslendirme İçin TTS Konteynerine Gönderiliyor...")
+        print(f"[{npc_adi.upper()}] Llama Cevabı Üretti, Seslendirme İçin TTS Konteynerine Gönderiliyor...", flush=True)
         
         tts_payload = {
             "text": dialogue_tr,
@@ -110,17 +110,17 @@ def chat():
             "referans_ses": istenen_ses
         }
         
-        # Docker içinde tts_sunucu ismiyle çağırıyoruz
         tts_response = requests.post("http://tts_sunucu:5001/generate_audio", json=tts_payload)
         
         if tts_response.status_code == 200:
             ses_yolu = tts_response.json().get("ses_dosyasi", "")
+            print(f"[TTS BAŞARILI] Ses Dosyası Oluştu: {ses_yolu}", flush=True)
         else:
-            print(f"[HATA] TTS Sunucusu cevap vermedi! (Kod: {tts_response.status_code})")
+            print(f"[HATA] TTS Sunucusu cevap vermedi! (Kod: {tts_response.status_code})", flush=True)
             ses_yolu = ""
         
-        print(f"[{npc_adi.upper()}] Soru: {user_message_tr}")
-        print(f"[{npc_adi.upper()}] Cevap: {dialogue_tr} | Eylem: {action_value}")
+        print(f"[{npc_adi.upper()}] Soru: {user_message_tr}", flush=True)
+        print(f"[{npc_adi.upper()}] Cevap: {dialogue_tr} | Eylem: {action_value}", flush=True)
 
         return jsonify({
             "diyalog": dialogue_tr,
@@ -129,8 +129,10 @@ def chat():
         })
 
     except Exception as e:
-        print(f"[HATA] {str(e)}")
-        return jsonify({"diyalog": "Ses tellerim koptu.", "eylem": "idle", "ses_dosyasi": ""})
+        hata_mesaji = str(e)
+        print(f"[KRİTİK HATA] {hata_mesaji}", flush=True)
+        # Unity ekranına "ses tellerim koptu" yerine asıl hatayı basıyoruz!
+        return jsonify({"diyalog": f"Hata Çıktı: {hata_mesaji}", "eylem": "hata", "ses_dosyasi": ""})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

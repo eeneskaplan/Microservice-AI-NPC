@@ -116,8 +116,8 @@ public class NPCAI : MonoBehaviour
    // Python'un ürettiği sesi oyun içine çekmek
     IEnumerator SesiIndirVeCal(string dosyaYolu)
     {
-        // Python'un çalıştığı ana klasörün tam yolu buraya yazılıyor
-        string pythonKlasoru = @"C:\Users\enesk\OneDrive\Desktop\bitirme_calismalar\AiNpcPrototip";
+        // Python'un çalıştığı ana klasörün yolu yeni klasör yapısına göre güncellendi
+        string pythonKlasoru = @"C:\Users\enesk\OneDrive\Desktop\Bitirme_YapayZeka_NPC\Python_Backend";
         
         // Klasör ile dosya adını birleştirip Unity'nin anlayacağı formata çeviriyorum
         string tamYol = System.IO.Path.Combine(pythonKlasoru, dosyaYolu).Replace("\\", "/");
@@ -179,4 +179,4 @@ public class NPCAI : MonoBehaviour
             if (sohbetAcikmi) SohbetiBitir(); 
         }
     }
-}   
+}

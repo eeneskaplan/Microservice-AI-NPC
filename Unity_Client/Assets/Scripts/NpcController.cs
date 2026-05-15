@@ -5,13 +5,6 @@ using System.Collections;
 using System.Text;
 
 [System.Serializable]
-public class FlaskResponse {
-    public string status;
-    public string output; 
-    public string message; // Python hata verdiyse buraya düşecek
-}
-
-[System.Serializable]
 public class NpcData {
     public string diyalog;
     public string eylem;
@@ -23,7 +16,8 @@ public class NpcController : MonoBehaviour {
     public TextMeshProUGUI outputText;
     
     [Header("API Ayarları")]
-    public string apiUrl = "[http://127.0.0.1:5000/chat](http://127.0.0.1:5000/chat)"; 
+    // SADECE temiz linki buraya yazıyoruz
+    public string apiUrl = "http://127.0.0.1:5000/chat"; 
 
     public void SoruyuGonder() {
         if (!string.IsNullOrEmpty(inputField.text)) {
@@ -34,6 +28,7 @@ public class NpcController : MonoBehaviour {
     IEnumerator PostRequest(string url, string message) {
         outputText.text = "Barney düşünüyor...";
         
+        // JSON verisini güvenli oluşturuyoruz
         string jsonPayload = "{\"message\":\"" + message + "\"}";
         
         UnityWebRequest request = new UnityWebRequest(url, "POST");
@@ -45,27 +40,22 @@ public class NpcController : MonoBehaviour {
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.Success) {
-            FlaskResponse flaskRes = JsonUtility.FromJson<FlaskResponse>(request.downloadHandler.text);
-            
-            // Eğer Python "success" döndüyse işle:
-            if (flaskRes.status == "success") {
-                // Model markdown koyduysa (```json) onları temizle:
-                string cleanJson = flaskRes.output.Replace("```json", "").Replace("```", "").Trim();
+            string json = request.downloadHandler.text;
+            Debug.Log("Backend'den Gelen: " + json); // Console'u kontrol et!
+
+            try {
+                // Eğer model markdown (```json) eklediyse temizliyoruz
+                string cleanJson = json.Replace("```json", "").Replace("```", "").Trim();
+                NpcData npcData = JsonUtility.FromJson<NpcData>(cleanJson);
                 
-                try {
-                    NpcData npcData = JsonUtility.FromJson<NpcData>(cleanJson);
-                    outputText.text = npcData.diyalog + "\n<color=yellow>[Eylem: " + npcData.eylem + "]</color>";
-                } catch (System.Exception e) {
-                    // JSON bozuksa ekrana ham metni bas
-                    outputText.text = "<color=red>Model JSON'ı bozdu!</color>\nGelen Ham Veri:\n" + cleanJson;
-                }
-            } else {
-                // Python'dan hata döndüyse (Ollama kapalıysa vb.)
-                outputText.text = "<color=red>Sunucu Hatası: </color>" + flaskRes.message;
+                outputText.text = npcData.diyalog + "\n<color=yellow>[Eylem: " + npcData.eylem + "]</color>";
+            } catch (System.Exception e) {
+                // JSON formatı hatalıysa ham metni bas ki ne olduğunu görelim
+                outputText.text = "Gelen veri işlenemedi. Ham veri: " + json;
             }
-            
         } else {
             outputText.text = "<color=red>Bağlantı Hatası: " + request.error + "</color>";
+            Debug.LogError("Detaylı Hata: " + request.downloadHandler.text);
         }
     }
 }
