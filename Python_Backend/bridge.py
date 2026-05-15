@@ -131,7 +131,7 @@ def chat():
     except Exception as e:
         hata_mesaji = str(e)
         print(f"[KRİTİK HATA] {hata_mesaji}", flush=True)
-        # Unity ekranına "ses tellerim koptu" yerine asıl hatayı basıyoruz!
+        
         return jsonify({"diyalog": f"Hata Çıktı: {hata_mesaji}", "eylem": "hata", "ses_dosyasi": ""})
 
 if __name__ == "__main__":
